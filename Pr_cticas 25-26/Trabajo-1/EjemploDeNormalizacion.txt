@@ -1,0 +1,51 @@
+Normalización: 
+
+Dataset de casas. Atributos: m2 (a1), número de habitaciones (a2)
+	Casa #1: 95m2, 3 habitaciones
+	Casa #2: 90m2, 1 habitación	
+	Casa #3: 91m2, 3 habitaciones
+
+	A qué casa se parece más la casa 3?
+	Distancia con casa #1
+		distancia a1: abs(95-91) = 4
+		distancia a2: abs(3-3) = 0
+		distancia total: sqrt(4*4 + 0*0) = 4
+
+	Distancia con casa #2:		
+		distancia a1: abs(91-90) = 1
+		distancia a2: abs(3-1) = 2
+		distancia total: sqrt(2*2 + 1) = 2.23
+
+	Dice que la que más se le parece es la 2, no está bien
+
+Normalizar: 
+	v = (v-min) / (max-min)
+
+	a1: min=90, max=95
+	a2: min=1, max=3
+
+Dataset normalizado: 
+	Casa #1: 
+		m2: 95 -> (95-90) / (95-90) = 1
+		habitaciones: 3 -> (3-1) / (3-1) = 1
+	Casa #2: 
+		m2: 90 -> (90-90) / (95-90) = 0
+		habitaciones: 1 -> (1-1) / (3-1) = 0
+	Casa #3: 
+		m2: 91 -> (91-90) / (95-90) = 0.2
+		habitaciones: 3 -> (3-1) / (3-1) = 1
+	
+
+	Distancia con casa #1
+		distancia a1: abs(1-0.2) = 0.8
+		distancia a2: abs(1-1) = 0
+		distancia total: sqrt(0.8*0.8 + 0*0) = 0.8
+
+	Distancia con casa #2:		
+		distancia a1: abs(0.2-0) = 0.2
+		distancia a2: abs(1-0) = 1
+		distancia total: sqrt(0.2*0.2 + 1*1) = 1.01
+
+	Dice que la que más se le parece es la 1, está bien
+
+	

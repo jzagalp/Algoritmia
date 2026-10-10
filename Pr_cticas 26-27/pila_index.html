@@ -1,0 +1,934 @@
+<title>Pila dinámica, paso a paso</title>
+
+<style>
+:root{
+  --papel:#FAFBFC;
+  --panel:#FFFFFF;
+  --panel-codigo:#F5F7F9;
+  --hoja:#FDFCFA;
+  --rejilla:#D9E2EA;
+  --tinta:#17222D;
+  --tinta-media:#4F6070;
+  --tinta-suave:#8A98A5;
+  --borde:#E2E7EC;
+  --borde-fuerte:#CFD8E0;
+  --azul:#0F6D9E;
+  --azul-suave:#E4F0F7;
+  --verde:#2E7D5B;
+  --verde-suave:#E5F2EB;
+  --rojo:#B4402E;
+  --rojo-suave:#F9E8E4;
+  --sombra:0 1px 2px rgba(23,34,45,.05), 0 8px 24px -16px rgba(23,34,45,.22);
+  --sobre-azul:#FFFFFF;
+  --serif:"Iowan Old Style","Palatino Linotype",Palatino,"Book Antiqua",Charter,Georgia,serif;
+  --mono:ui-monospace,"SF Mono",SFMono-Regular,"Cascadia Mono","JetBrains Mono",Menlo,Consolas,monospace;
+  --sans:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",sans-serif;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --papel:#10161C;
+    --panel:#171F27;
+    --panel-codigo:#131A21;
+    --hoja:#141C23;
+    --rejilla:#263039;
+    --tinta:#E2E8EE;
+    --tinta-media:#9AA9B6;
+    --tinta-suave:#6B7A88;
+    --borde:#27313B;
+    --borde-fuerte:#35424E;
+    --azul:#5AAEDC;
+    --azul-suave:#14303F;
+    --verde:#5FBF92;
+    --verde-suave:#142B22;
+    --rojo:#E3775F;
+    --rojo-suave:#33201B;
+    --sobre-azul:#0B1116;
+    --sombra:0 1px 2px rgba(0,0,0,.3), 0 8px 24px -16px rgba(0,0,0,.6);
+  }
+}
+:root[data-theme="dark"]{
+  --papel:#10161C;
+  --panel:#171F27;
+  --panel-codigo:#131A21;
+  --hoja:#141C23;
+  --rejilla:#263039;
+  --tinta:#E2E8EE;
+  --tinta-media:#9AA9B6;
+  --tinta-suave:#6B7A88;
+  --borde:#27313B;
+  --borde-fuerte:#35424E;
+  --azul:#5AAEDC;
+  --azul-suave:#14303F;
+  --verde:#5FBF92;
+  --verde-suave:#142B22;
+  --rojo:#E3775F;
+  --rojo-suave:#33201B;
+  --sobre-azul:#0B1116;
+  --sombra:0 1px 2px rgba(0,0,0,.3), 0 8px 24px -16px rgba(0,0,0,.6);
+}
+
+*{box-sizing:border-box}
+body{
+  margin:0;
+  background:var(--papel);
+  color:var(--tinta);
+  font-family:var(--sans);
+  font-size:16px;
+  line-height:1.5;
+  -webkit-font-smoothing:antialiased;
+}
+.envoltorio{max-width:1400px;margin:0 auto;padding:24px 20px 64px;display:flex;flex-direction:column;gap:20px}
+
+/* ---------- cabecera ---------- */
+.cabecera{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:16px 24px;padding-bottom:16px;border-bottom:1px solid var(--borde)}
+.marca{display:flex;flex-direction:column;gap:4px}
+.eyebrow{font-size:.68rem;text-transform:uppercase;letter-spacing:.14em;color:var(--tinta-suave);font-weight:600}
+h1{font-family:var(--serif);font-size:1.6rem;line-height:1.2;margin:0;font-weight:600;text-wrap:balance;letter-spacing:-.01em}
+.lema{font-family:var(--serif);font-size:.95rem;color:var(--tinta-media);margin:2px 0 0;max-width:52ch}
+
+.pestanas-estructura{display:flex;flex-wrap:wrap;gap:6px}
+.pest{
+  font-family:var(--mono);font-size:.78rem;padding:7px 13px;border-radius:3px;
+  border:1px solid var(--borde-fuerte);background:transparent;color:var(--tinta-media);
+  cursor:pointer;transition:background .12s,border-color .12s,color .12s;
+}
+.pest:hover:not(:disabled){border-color:var(--azul);color:var(--azul)}
+.pest[aria-pressed="true"]{background:var(--azul);border-color:var(--azul);color:var(--sobre-azul)}
+.pest:disabled{opacity:.42;cursor:not-allowed;border-style:dashed}
+.pest:focus-visible,button:focus-visible,select:focus-visible,.linea:focus-visible{outline:2px solid var(--azul);outline-offset:2px}
+
+/* ---------- paneles ---------- */
+.panel{background:var(--panel);border:1px solid var(--borde);border-radius:4px;box-shadow:var(--sombra)}
+.panel-cab{
+  display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px 16px;
+  padding:12px 18px;border-bottom:1px solid var(--borde);
+}
+.titulo-panel{font-size:.68rem;text-transform:uppercase;letter-spacing:.14em;font-weight:600;color:var(--tinta-media);margin:0}
+
+/* ---------- seccion declaracion ---------- */
+.declaracion{display:grid;grid-template-columns:minmax(280px,.85fr) 2fr;gap:0}
+.declaracion > .col-codigo{border-right:1px solid var(--borde)}
+.col-codigo{padding:18px}
+pre{margin:0;font-family:var(--mono);font-size:.82rem;line-height:1.7;overflow-x:auto;color:var(--tinta)}
+.nota{font-family:var(--serif);font-size:.94rem;color:var(--tinta-media);margin:14px 0 0;line-height:1.55}
+.nota code,.narracion code,li code{font-family:var(--mono);font-size:.86em;background:var(--panel-codigo);padding:1px 4px;border-radius:2px;color:var(--tinta)}
+.ejemplos{padding:18px;display:flex;flex-direction:column;gap:16px}
+.ejemplo-cab{font-family:var(--mono);font-size:.74rem;color:var(--tinta-media);margin-bottom:6px}
+.ejemplo-cab b{color:var(--tinta);font-weight:600}
+
+/* ---------- hoja de dibujo ---------- */
+/* La rejilla vive en el contenedor, a 13 px = 1 módulo, y el SVG se dibuja
+   encima a escala 1:1, de modo que la geometría cae siempre sobre el cuadriculado. */
+.hoja{
+  background-color:var(--hoja);
+  background-image:linear-gradient(var(--rejilla) 1px,transparent 1px),
+                   linear-gradient(90deg,var(--rejilla) 1px,transparent 1px);
+  background-size:13px 13px;
+  background-position:0 0;
+  border:1px solid var(--borde);border-radius:3px;overflow-x:auto;
+}
+.hoja svg{display:block}
+
+/* ---------- seccion funciones ---------- */
+.trabajo{display:grid;grid-template-columns:minmax(340px,1fr) minmax(360px,1.15fr);gap:0}
+.lado-codigo{border-right:1px solid var(--borde);display:flex;flex-direction:column;min-width:0}
+.lado-dibujo{display:flex;flex-direction:column;min-width:0}
+
+.barra-func{display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:12px 18px;border-bottom:1px solid var(--borde)}
+.barra-func .sep{flex:1}
+.pest-func{font-family:var(--mono);font-size:.78rem;padding:5px 11px;border-radius:3px;border:1px solid transparent;background:transparent;color:var(--tinta-media);cursor:pointer}
+.pest-func:hover{color:var(--azul)}
+.pest-func[aria-pressed="true"]{border-color:var(--borde-fuerte);background:var(--panel-codigo);color:var(--tinta);font-weight:600}
+label.etq{font-size:.68rem;text-transform:uppercase;letter-spacing:.12em;color:var(--tinta-suave);font-weight:600}
+select{
+  font-family:var(--mono);font-size:.78rem;padding:5px 8px;border-radius:3px;
+  border:1px solid var(--borde-fuerte);background:var(--panel);color:var(--tinta);cursor:pointer;
+}
+
+.codigo{background:var(--panel-codigo);flex:1;padding:14px 0;overflow-x:auto}
+.linea{
+  display:flex;gap:14px;padding:1px 18px 1px 14px;border-left:3px solid transparent;
+  font-family:var(--mono);font-size:.83rem;line-height:1.75;white-space:pre;cursor:pointer;
+  color:var(--tinta-media);background:none;border-top:0;border-right:0;border-bottom:0;
+  min-width:100%;width:max-content;text-align:left;
+}
+.linea:hover{background:rgba(127,127,127,.06)}
+.linea .num{color:var(--tinta-suave);min-width:1.4em;text-align:right;user-select:none;font-variant-numeric:tabular-nums}
+.linea.activa{background:var(--azul-suave);border-left-color:var(--azul);color:var(--tinta);font-weight:600}
+.linea.activa .num{color:var(--azul)}
+
+.zona-dibujo{padding:18px;display:flex;flex-direction:column;gap:14px;flex:1}
+.narracion{
+  font-family:var(--serif);font-size:1.02rem;line-height:1.58;color:var(--tinta);margin:0;
+  min-height:5.2em;max-width:62ch;
+}
+.narracion strong{color:var(--azul);font-weight:600}
+.narracion.oculta{color:var(--tinta-suave);font-style:italic}
+
+.leyenda{display:flex;flex-wrap:wrap;gap:6px 16px;font-size:.7rem;color:var(--tinta-media);font-family:var(--mono)}
+.leyenda span{display:inline-flex;align-items:center;gap:6px}
+.pastilla{width:20px;height:10px;border-radius:2px;border:1.5px solid var(--tinta-suave);background:transparent;flex:none}
+.pastilla.nueva{border-color:var(--verde);background:var(--verde-suave)}
+.pastilla.cambia{border-color:var(--azul);background:var(--azul-suave)}
+.pastilla.liberando{border-color:var(--rojo);background:var(--rojo-suave)}
+.pastilla.fantasma{border-color:var(--tinta-suave);border-style:dashed;background:transparent}
+
+/* ---------- controles ---------- */
+.controles{display:flex;flex-wrap:wrap;align-items:center;gap:10px;padding:14px 18px;border-top:1px solid var(--borde)}
+.boton{
+  font-family:var(--sans);font-size:.82rem;font-weight:600;padding:8px 15px;border-radius:3px;
+  border:1px solid var(--borde-fuerte);background:var(--panel);color:var(--tinta);cursor:pointer;
+  transition:border-color .12s,color .12s;
+}
+.boton:hover:not(:disabled){border-color:var(--azul);color:var(--azul)}
+.boton:disabled{opacity:.4;cursor:not-allowed}
+.boton.principal{background:var(--azul);border-color:var(--azul);color:var(--sobre-azul)}
+.boton.principal:hover:not(:disabled){filter:brightness(1.08);color:var(--sobre-azul)}
+.contador{font-family:var(--mono);font-size:.76rem;color:var(--tinta-media);font-variant-numeric:tabular-nums}
+.barra{flex:1;min-width:80px;height:3px;background:var(--borde);border-radius:2px;overflow:hidden}
+.barra i{display:block;height:100%;background:var(--azul);transition:width .18s ease}
+.interruptor{display:inline-flex;align-items:center;gap:7px;font-size:.76rem;color:var(--tinta-media);cursor:pointer;user-select:none}
+.interruptor input{accent-color:var(--azul);cursor:pointer;margin:0}
+
+/* ---------- pie ---------- */
+.pie{font-family:var(--serif);font-size:.9rem;color:var(--tinta-media);max-width:70ch;line-height:1.6}
+.pie b{color:var(--tinta);font-weight:600}
+
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+@media (max-width:900px){
+  .declaracion,.trabajo{grid-template-columns:1fr}
+  .declaracion > .col-codigo,.lado-codigo{border-right:0;border-bottom:1px solid var(--borde)}
+  h1{font-size:1.35rem}
+}
+</style>
+
+<div class="envoltorio">
+
+  <header class="cabecera">
+    <div class="marca">
+      <div class="eyebrow">Algoritmia · Segundo curso</div>
+      <h1>Pila dinámica, paso a paso</h1>
+      <p class="lema">Dibuja primero, programa después. Cada línea de código, al lado del dibujo que le corresponde.</p>
+    </div>
+  </header>
+
+  <section class="panel">
+    <div class="panel-cab">
+      <h2 class="titulo-panel">La estructura</h2>
+      <span class="contador" id="refEstructura"></span>
+    </div>
+    <div class="declaracion">
+      <div class="col-codigo">
+        <pre id="declaracion"></pre>
+        <p class="nota" id="notaDeclaracion"></p>
+      </div>
+      <div class="ejemplos" id="ejemplos"></div>
+    </div>
+  </section>
+
+  <section class="panel">
+    <div class="panel-cab">
+      <h2 class="titulo-panel">Las funciones</h2>
+      <label class="interruptor">
+        <input type="checkbox" id="modoPrediccion">
+        Modo predicción
+      </label>
+    </div>
+
+    <div class="barra-func">
+      <span class="etq">Función</span>
+      <div id="tabsFuncion" style="display:flex;gap:6px;flex-wrap:wrap"></div>
+      <span class="sep"></span>
+      <span class="etq">Caso</span>
+      <select id="selEscenario"></select>
+    </div>
+
+    <div class="trabajo">
+      <div class="lado-codigo">
+        <div class="codigo" id="codigo"></div>
+      </div>
+
+      <div class="lado-dibujo">
+        <div class="zona-dibujo">
+          <div class="hoja" id="hoja"></div>
+          <p class="narracion" id="narracion"></p>
+          <div class="leyenda">
+            <span><i class="pastilla nueva"></i>recién creada</span>
+            <span><i class="pastilla cambia"></i>cambia en esta línea</span>
+            <span><i class="pastilla liberando"></i>se está liberando</span>
+            <span><i class="pastilla fantasma"></i>memoria ya liberada</span>
+          </div>
+        </div>
+        <div class="controles">
+          <button class="boton" id="btnAtras">← Atrás</button>
+          <button class="boton principal" id="btnSiguiente">Siguiente →</button>
+          <span class="contador" id="contador"></span>
+          <span class="barra"><i id="progreso"></i></span>
+          <button class="boton" id="btnReiniciar">Reiniciar</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <p class="pie">
+    <b>Cómo usarlo:</b> avanza con los botones o con las flechas ← → del teclado. También puedes pinchar
+    directamente en una línea de código para saltar a ella. Con el <b>modo predicción</b> activado, el dibujo
+    no se actualiza hasta que lo pides: intenta dibujar tú el resultado en papel antes de revelarlo.
+  </p>
+</div>
+
+<script>
+/* ============================================================
+   MODELO DE ESTADO  (común a todas las estructuras)
+   celda   : {id, valor, sig, slot, estilo}
+             sig -> id de otra celda | "NULL" | null (basura)
+             slot -> posición fija en la fila; NO cambia dentro de un escenario
+             estilo -> null | "nueva" | "cambia" | "liberando" | "fantasma"
+   puntero : {nombre, destino, estilo, ancla}
+             destino -> id de celda | "NULL" | null (sin inicializar)
+             ancla   -> sólo si destino es null: columna sobre la que se coloca la
+                        etiqueta mientras no apunta a nada. Se pone la columna donde
+                        va a aparecer su celda, para que luego no se mueva.
+   ============================================================ */
+const c = (id, valor, sig, slot, estilo=null) => ({id, valor, sig, slot, estilo, dir:1});
+/* celda espejada: el campo sig queda a la izquierda y su flecha apunta hacia la
+   izquierda. Es como se dibuja la pila izquierda de una secuencia, que guarda los
+   elementos del revés. */
+const ci = (id, valor, sig, slot, estilo=null) => ({id, valor, sig, slot, estilo, dir:-1});
+/* celda doblemente enlazada: además del sig lleva el ant */
+const cd = (id, valor, ant, sig, slot, estilo=null) => ({id, valor, ant, sig, slot, estilo, dir:1});
+/* nodo de árbol: dos hijos, y además de la columna lleva el nivel (profundidad).
+   La columna es la posición en inorden, así que leer las columnas de izquierda a
+   derecha da los elementos ordenados. foco marca el campo al que apunta `a`. */
+const ca = (id, valor, izda, dcha, slot, nivel, estilo=null, foco=null) =>
+  ({id, valor, izda, dcha, slot, nivel, estilo, foco, dir:1});
+/* casilla de min-montículo: caja lisa, sin campos de enlace, porque un montículo
+   no guarda punteros. `etiqueta` es el índice, que es lo que une las dos vistas
+   (el array y el mismo array visto como árbol). */
+const cm = (id, valor, slot, nivel, etiqueta, estilo=null, izda=null, dcha=null) =>
+  ({id, valor, slot, nivel, etiqueta, estilo, izda, dcha, dir:1});
+const p = (nombre, destino, estilo=null, ancla=null) => ({nombre, destino, estilo, ancla});
+/* variable local con un valor escalar (no un puntero): valor null = basura */
+const v = (nombre, valor, estilo=null) => ({nombre, valor, estilo});
+/* punto: columna sobre la que está el punto de interés (la marca se dibuja en el
+   hueco anterior a esa columna). Sólo lo usan las secuencias.
+   vars: variables locales; si un escenario declara `vars` valen para todos sus pasos. */
+const E = (celdas, punteros, punto=null, vars=null) => ({celdas, punteros, punto, vars});
+
+/* ============================================================
+   DIBUJANTE: familia "lista enlazada"
+   Geometría en módulos de cuadrícula (M = 13 px).
+   ============================================================ */
+const M = 13, CELL_W = 6*M, CELL_H = 3*M, PITCH = 10*M, PAD = 2*M;
+const CY = 6*M, MID = CY + CELL_H/2;
+const PTR_Y = M, PTR_H = 2*M;
+const ROW = 5*M;                    // separación entre niveles de un árbol
+const ALTO = 12*M;                  // alto por defecto (estructuras de una sola fila)
+const yDe = nivel => CY + (nivel || 0) * ROW;
+
+/* Un "marco" fija el sistema de coordenadas para TODOS los pasos de un escenario:
+   así las celdas no se desplazan de un paso a otro cuando aparece o desaparece una.
+   Los dibujos sueltos (los ejemplos de la estructura) no lo necesitan. */
+const SLOT_NULO = d => { const m = /^NULL:(-?\d+)$/.exec(d || ""); return m ? +m[1] : null; };
+
+function marcoDe(pasos, nullSlotFijo){
+  let minS = Infinity, maxS = -Infinity, hay = false, algo = false, maxNivel = 0, hayVars = false;
+  const anota = s => { algo = true; minS = Math.min(minS, s); maxS = Math.max(maxS, s); };
+  for(const s of pasos){
+    for(const k of (s.estado.celdas || [])){ hay = true; anota(k.slot); maxNivel = Math.max(maxNivel, k.nivel || 0); }
+    /* también cuentan las columnas donde va un NULL suelto, el ancla de un puntero
+       sin inicializar y la marca del punto de interés */
+    for(const q of (s.estado.punteros || [])){
+      const sn = SLOT_NULO(q.destino);
+      if(sn != null) anota(sn);
+      if(q.destino === null && q.ancla != null) anota(q.ancla);
+    }
+    if(s.estado.punto != null) anota(s.estado.punto);
+    if(s.estado.vars && s.estado.vars.length) hayVars = true;
+  }
+  if(!algo){ minS = 0; maxS = -1; }
+  /* Por defecto el marcador NULL va detrás de la última celda, pero un escenario
+     puede fijarlo: en `encolar` sobre cola vacía interesa tenerlo a la izquierda
+     para que la celda nueva siga apareciendo por la derecha, como en el otro caso. */
+  const nullSlot = (nullSlotFijo != null) ? nullSlotFijo : (hay ? maxS + 1 : 0);
+  return {minS: Math.min(minS, nullSlot), maxS: Math.max(maxS, nullSlot), nullSlot, maxNivel, hayVars};
+}
+
+const esc = s => String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+const anchoEtq = t => Math.max(38, t.length*7.9 + 18);
+
+function colorDe(estilo){
+  if(estilo==="nueva")     return {trazo:"var(--verde)", relleno:"var(--verde-suave)", texto:"var(--tinta)"};
+  if(estilo==="cambia")    return {trazo:"var(--azul)",  relleno:"var(--azul-suave)",  texto:"var(--tinta)"};
+  if(estilo==="liberando") return {trazo:"var(--rojo)",  relleno:"var(--rojo-suave)",  texto:"var(--rojo)"};
+  if(estilo==="fantasma")  return {trazo:"var(--tinta-suave)", relleno:"transparent",  texto:"var(--tinta-suave)"};
+  return {trazo:"var(--borde-fuerte)", relleno:"var(--panel)", texto:"var(--tinta)"};
+}
+
+let nSvg = 0;
+function dibujar(estado, marco, modo){
+  const uid = `pta${++nSvg}`;   // id único: en la página conviven varios SVG
+  const doble = modo === "doble", arbol = modo === "arbol", mont = modo === "monticulo";
+  const OFF = doble ? 8 : 0;
+  const ANCHO_C = mont ? 4*M : CELL_W;
+  const celdas = estado.celdas || [], punteros = estado.punteros || [];
+  const porId = Object.fromEntries(celdas.map(k => [k.id, k]));
+  const slots = celdas.map(k => k.slot);
+  const minS = marco ? marco.minS : (slots.length ? Math.min(...slots) : 0);
+  const maxS = marco ? marco.maxS : (slots.length ? Math.max(...slots) : 0);
+  const PASO = mont ? 6*M : PITCH;
+  const x = s => PAD + (s - minS) * PASO;
+  const nullSlot = marco ? marco.nullSlot : (celdas.length ? maxS + 1 : 0);
+  const nullX = x(nullSlot), nullCx = nullX + 20;
+  let anchoUtil = x(maxS) + ANCHO_C + PAD;   // maxS ya incluye la columna del NULL
+
+  let g = "";
+
+  /* La rejilla la pone el contenedor .hoja; aquí sólo va el dibujo. */
+  g += `<defs>
+    <marker id="${uid}" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 1 L 9 5 L 0 9 z" fill="context-stroke"/>
+    </marker>
+  </defs>`;
+
+  /* En las estructuras doblemente enlazadas la celda tiene tres compartimentos
+     (ant | elem | sig) y los enlaces van por dos alturas distintas: los `sig`
+     un poco por encima del centro y los `ant` un poco por debajo, para que las
+     idas y las vueltas no se pisen. */
+
+  /* contenido de un compartimento de enlace: punto, barra de NULL, o "?" si es basura */
+  const enlace = (ccx, ccy, top, valor, col, guiones) => {
+    if(valor == null)
+      return `<text x="${ccx}" y="${top+CELL_H/2+5}" text-anchor="middle" font-family="var(--mono)"
+                font-size="14" fill="${col.texto}" opacity=".5">?</text>`;
+    if(valor === "NULL")
+      return `<line x1="${ccx-M+5}" y1="${top+CELL_H-5}" x2="${ccx+M-5}" y2="${top+5}"
+                stroke="${col.trazo}" stroke-width="1.6"${guiones}/>`;
+    return `<circle cx="${ccx}" cy="${ccy}" r="3.2" fill="${col.trazo}"/>`;
+  };
+
+  /* --- celdas --- */
+  for(const k of celdas){
+    const cx = x(k.slot), cy0 = yDe(k.nivel), med = cy0 + CELL_H/2;
+    const col = colorDe(k.estilo);
+    const guiones = k.estilo === "fantasma" ? ` stroke-dasharray="5 4"` : "";
+    const divisor = dx => `<line x1="${cx+dx}" y1="${cy0}" x2="${cx+dx}" y2="${cy0+CELL_H}"
+            stroke="${col.trazo}" stroke-width="1.25"${guiones}/>`;
+
+    g += `<rect x="${cx}" y="${cy0}" width="${ANCHO_C}" height="${CELL_H}" rx="2"
+            fill="${col.relleno}" stroke="${col.trazo}" stroke-width="1.75"${guiones}/>`;
+
+    const valor = k.valor == null ? "?" : k.valor;
+    const opa = k.valor == null ? ' opacity=".5"' : "";
+    const texto = xc => `<text x="${xc}" y="${med+5}" text-anchor="middle" font-family="var(--mono)"
+            font-size="15" font-weight="600" fill="${col.texto}"${opa}>${esc(valor)}</text>`;
+
+    if(mont){
+      /* caja lisa: sólo el valor, y el índice debajo */
+      g += texto(cx + ANCHO_C/2);
+      if(k.etiqueta != null)
+        g += `<text x="${cx+ANCHO_C/2}" y="${cy0+CELL_H+14}" text-anchor="middle"
+                font-family="var(--mono)" font-size="10.5" fill="var(--tinta-suave)">${esc(k.etiqueta)}</text>`;
+    } else if(arbol){
+      /* izda | elem | dcha, con los enlaces saliendo hacia abajo */
+      g += divisor(2*M) + divisor(4*M);
+      g += enlace(cx+1*M, med, cy0, k.izda, col, guiones);
+      g += texto(cx+3*M);
+      g += enlace(cx+5*M, med, cy0, k.dcha, col, guiones);
+    } else if(doble){
+      g += divisor(2*M) + divisor(4*M);
+      g += enlace(cx+1*M, med+OFF, cy0, k.ant, col, guiones);
+      g += texto(cx+3*M);
+      g += enlace(cx+5*M, med-OFF, cy0, k.sig, col, guiones);
+    } else if(k.dir === -1){
+      /* espejada: el sig va en el compartimento de la izquierda */
+      g += divisor(2*M);
+      g += texto(cx+4*M);
+      g += enlace(cx+1*M, med, cy0, k.sig, col, guiones);
+    } else {
+      g += divisor(4*M);
+      g += texto(cx+2*M);
+      g += enlace(cx+5*M, med, cy0, k.sig, col, guiones);
+    }
+
+    /* el campo al que apunta `a` en las llamadas recursivas */
+    if(k.foco){
+      const fx = cx + (k.foco === "izda" ? 0 : 4*M);
+      g += `<rect x="${fx+2.5}" y="${cy0+2.5}" width="${2*M-5}" height="${CELL_H-5}" rx="2"
+              fill="none" stroke="var(--azul)" stroke-width="2"/>`;
+    }
+
+    if(k.estilo === "fantasma"){
+      g += `<line x1="${cx+6}" y1="${cy0+6}" x2="${cx+ANCHO_C-6}" y2="${cy0+CELL_H-6}"
+              stroke="var(--tinta-suave)" stroke-width="1.25" opacity=".55"/>`;
+    }
+  }
+
+  /* --- ramas del árbol: salen por debajo del campo y bajan al hijo --- */
+  if(arbol || mont){
+    for(const k of celdas) for(const campo of ["izda","dcha"]){
+      const hijo = porId[k[campo]];
+      if(k[campo] == null || k[campo] === "NULL" || !hijo) continue;
+      const roto = hijo.estilo === "fantasma" || hijo.estilo === "liberando";
+      /* si el nodo tiene un campo enfocado, sólo esa rama se resalta: la otra
+         no es por donde va la búsqueda */
+      const activa = !k.foco || k.foco === campo;
+      const col = roto ? "var(--rojo)"
+                : (activa ? colorDe(k.estilo).trazo : colorDe(null).trazo);
+      const gu = (roto || k.estilo === "fantasma") ? ` stroke-dasharray="4 4"` : "";
+      g += `<line x1="${x(k.slot) + (mont ? ANCHO_C/2 : (campo === "izda" ? 1*M : 5*M))}" y1="${yDe(k.nivel)+CELL_H}"
+              x2="${x(hijo.slot)+ANCHO_C/2}" y2="${yDe(hijo.nivel)-4}"
+              stroke="${col}" stroke-width="1.75" marker-end="url(#${uid})"${gu}/>`;
+    }
+  }
+
+  /* --- flechas entre celdas (NULL ya se ha marcado con la barra) ---
+     Un enlace que apunta a una celda liberada se dibuja en rojo y discontinuo:
+     es justo el enlace que hay que arreglar. */
+  const flecha = (k, campo, y) => {
+    const destino = porId[k[campo]];
+    if(k[campo] == null || k[campo] === "NULL" || !destino) return "";
+    const roto = destino.estilo === "fantasma" || destino.estilo === "liberando";
+    const col = roto ? "var(--rojo)" : colorDe(k.estilo).trazo;
+    const gu = (roto || k.estilo === "fantasma") ? ` stroke-dasharray="4 4"` : "";
+    /* el sig de una celda espejada sale por la izquierda, igual que el ant */
+    const haciaIzq = campo === "ant" || (campo === "sig" && k.dir === -1);
+    const [x1, x2] = haciaIzq
+      ? [x(k.slot) + 1*M - 4, x(destino.slot) + CELL_W + 4]
+      : [x(k.slot) + 5*M + 4, x(destino.slot) - 4];
+
+    /* Si hay alguna celda por medio, el enlace la rodea por debajo en lugar de
+       atravesarla. Es lo que se ve mientras una inserción está a medias: la cadena
+       vieja todavía se salta la celda nueva. */
+    const [a, b] = [Math.min(k.slot, destino.slot), Math.max(k.slot, destino.slot)];
+    if(celdas.some(o => o.slot > a && o.slot < b)){
+      const pico = CY + CELL_H + (campo === "ant" ? 21 : 8);
+      return `<path d="M ${x1} ${y} Q ${(x1+x2)/2} ${y + 2*(pico-y)} ${x2} ${y}" fill="none"
+                stroke="${col}" stroke-width="1.75" marker-end="url(#${uid})"${gu}/>`;
+    }
+    return `<line x1="${x1}" y1="${y}" x2="${x2}" y2="${y}"
+              stroke="${col}" stroke-width="1.75" marker-end="url(#${uid})"${gu}/>`;
+  };
+  if(!arbol){
+    for(const k of celdas) g += flecha(k, "sig", MID - OFF);
+    if(doble) for(const k of celdas) g += flecha(k, "ant", MID + OFF);
+  }
+
+  /* --- marcadores NULL: sólo hacen falta cuando una variable puntero vale NULL,
+         porque en los campos sig lo indica la barra diagonal. Una secuencia tiene
+         dos pilas, así que puede necesitar más de uno; con "NULL:<columna>" se dice
+         en cuál va. --- */
+  const slotsNulos = new Set();
+  for(const q of punteros){
+    if(q.destino === "NULL") slotsNulos.add(nullSlot);
+    const sn = SLOT_NULO(q.destino);
+    if(sn != null) slotsNulos.add(sn);
+  }
+  for(const s of slotsNulos){
+    g += `<text x="${x(s)+20}" y="${MID+5}" text-anchor="middle" font-family="var(--mono)"
+            font-size="13" fill="var(--tinta-suave)" letter-spacing=".05em">NULL</text>`;
+  }
+
+  /* --- marca del punto de interés: va en el hueco anterior a su columna --- */
+  if(estado.punto != null){
+    const px = x(estado.punto) - (PITCH - CELL_W)/2;
+    g += `<line x1="${px}" y1="${CY-13}" x2="${px}" y2="${CY+CELL_H+7}"
+            stroke="var(--azul)" stroke-width="1.75" stroke-dasharray="5 4"/>
+          <path d="M ${px-5.5} ${CY-13} L ${px+5.5} ${CY-13} L ${px} ${CY-4} z" fill="var(--azul)"/>
+          <text x="${px}" y="${CY+CELL_H+22}" text-anchor="middle" font-family="var(--mono)"
+            font-size="11" font-weight="600" fill="var(--azul)">punto</text>`;
+  }
+
+  /* --- punteros ---
+     Con destino: agrupados y centrados sobre su celda.
+     Sin inicializar: en la MISMA banda de arriba, ancladas sobre la columna más a la
+     izquierda del marco — que es justo donde va a aparecer su celda — y dibujadas con
+     un muñón discontinuo acabado en "?". Así la etiqueta no se mueve de sitio en cuanto
+     el puntero recibe un valor: sólo el muñón se convierte en flecha. */
+  const CLAVE_LIBRE = "__sin_destino__";
+  const anclas = new Map();
+  const grupos = new Map();
+
+  for(const q of punteros){
+    let clave;
+    if(q.destino !== null){
+      clave = q.destino;
+    } else {
+      const slot = q.ancla != null ? q.ancla : minS;
+      const celdaAhi = celdas.find(k => k.slot === slot);
+      if(celdaAhi) clave = celdaAhi.id;                 // ya hay celda: nos ponemos a su lado
+      else if(slotsNulos.has(slot)) clave = "NULL:" + slot;  // coincide con un marcador NULL
+      else { clave = CLAVE_LIBRE + slot; anclas.set(clave, slot); }
+    }
+    if(!grupos.has(clave)) grupos.set(clave, []);
+    grupos.get(clave).push(q);
+  }
+
+  for(const [clave, lista] of grupos){
+    let objCx, objY, objIzq, objAncho;
+    const slotNulo = clave === "NULL" ? nullSlot : SLOT_NULO(clave);
+    if(anclas.has(clave)){ objIzq = x(anclas.get(clave)); objAncho = ANCHO_C; objCx = objIzq + ANCHO_C/2; objY = CY - 3; }
+    else if(slotNulo != null){ objCx = x(slotNulo) + 20; objY = MID - 12; objIzq = objCx - 20; objAncho = 40; }
+    else if(porId[clave]){ objIzq = x(porId[clave].slot); objAncho = ANCHO_C; objCx = objIzq + ANCHO_C/2; objY = yDe(porId[clave].nivel) - 3; }
+    else continue;
+
+    /* la etiqueta mide lo mismo tenga o no destino: así nada se desplaza */
+    const anchos = lista.map(q => anchoEtq(q.nombre));
+    const total = anchos.reduce((a,b) => a+b, 0) + (lista.length-1)*8;
+    const conDestino = lista.filter(q => q.destino !== null).length;
+    /* con tres etiquetas sobre una misma celda el grupo se sale por la izquierda */
+    let cur = Math.max(4, objCx - total/2), iFlecha = 0;
+    anchoUtil = Math.max(anchoUtil, cur + total + 4);
+
+    lista.forEach((q, i) => {
+      const w = anchos[i], col = colorDe(q.estilo);
+      const bx = cur, bcx = bx + w/2;
+      const libre = q.destino === null;
+      const colgante = q.estilo === "fantasma";
+      const guiones = (libre || colgante) ? ` stroke-dasharray="4 4"` : "";
+      const trazo = libre ? "var(--tinta-suave)" : (colgante ? "var(--rojo)" : col.trazo);
+      const relleno = libre ? "transparent" : (colgante ? "var(--rojo-suave)" : col.relleno);
+      const textoCol = libre ? "var(--tinta-suave)" : (colgante ? "var(--rojo)" : col.texto);
+
+      g += `<rect x="${bx}" y="${PTR_Y}" width="${w}" height="${PTR_H}" rx="3"
+              fill="${relleno}" stroke="${trazo}" stroke-width="1.5"${libre ? ' stroke-dasharray="5 4"' : ""}/>
+            <text x="${bcx}" y="${PTR_Y+PTR_H/2+4.5}" text-anchor="middle" font-family="var(--mono)"
+              font-size="12.5" font-weight="600" fill="${textoCol}">${esc(q.nombre)}</text>`;
+
+      if(libre){
+        g += `<path d="M ${bcx} ${PTR_Y+PTR_H} L ${bcx} ${PTR_Y+PTR_H+13}" fill="none"
+                stroke="var(--tinta-suave)" stroke-width="1.75" stroke-dasharray="4 4"/>
+              <text x="${bcx}" y="${PTR_Y+PTR_H+30}" text-anchor="middle" font-family="var(--mono)"
+                font-size="14" fill="var(--tinta-suave)">?</text>`;
+      } else {
+        iFlecha++;
+        const destinoX = objIzq + objAncho*iFlecha/(conDestino+1);
+        g += `<path d="M ${bcx} ${PTR_Y+PTR_H} L ${bcx} ${PTR_Y+PTR_H+10} L ${destinoX} ${objY-10} L ${destinoX} ${objY}"
+                fill="none" stroke="${trazo}" stroke-width="1.75" marker-end="url(#${uid})"${guiones}/>`;
+      }
+      cur += w + 8;
+    });
+  }
+
+  /* --- variables locales: su propio carril al pie del dibujo ---
+     Se dibujan como una cajita con el valor dentro, sin flecha: no son punteros,
+     son valores. Discontinua y con "?" mientras no se les ha asignado nada. */
+  /* el alto depende de la profundidad del árbol; el carril de variables va al pie */
+  const filas = (marco && marco.maxNivel) || Math.max(0, ...celdas.map(k => k.nivel || 0));
+  const altoBase = Math.max(ALTO, CY + filas*ROW + CELL_H + (mont ? 2*M : M));
+  const vars = estado.vars || [];
+  const varY = altoBase - M;
+  let vx = 4;
+  for(const w of vars){
+    const col = colorDe(w.estilo), pelado = w.valor == null;
+    g += `<text x="${vx}" y="${varY+17}" font-family="var(--mono)" font-size="12"
+            fill="var(--tinta-media)">${esc(w.nombre)}</text>`;
+    vx += w.nombre.length * 7.3 + 8;
+    const anchoCaja = Math.max(2*M, String(pelado ? "?" : w.valor).length*9 + 14);
+    g += `<rect x="${vx}" y="${varY}" width="${anchoCaja}" height="${2*M}" rx="2"
+            fill="${pelado ? "transparent" : col.relleno}"
+            stroke="${pelado ? "var(--tinta-suave)" : col.trazo}" stroke-width="1.5"${pelado ? ' stroke-dasharray="5 4"' : ""}/>
+          <text x="${vx+anchoCaja/2}" y="${varY+18}" text-anchor="middle" font-family="var(--mono)"
+            font-size="14" font-weight="600"
+            fill="${pelado ? "var(--tinta-suave)" : col.texto}"${pelado ? ' opacity=".7"' : ""}>${esc(pelado ? "?" : w.valor)}</text>`;
+    vx += anchoCaja + 18;
+  }
+  if(vars.length) anchoUtil = Math.max(anchoUtil, vx);
+
+  const alto = altoBase + ((marco && marco.hayVars) ? 2*M : 0);
+  const ancho = Math.ceil(Math.max(anchoUtil, (marco && marco.anchoMin) || 0));
+  return `<svg viewBox="0 0 ${ancho} ${alto}" width="${ancho}" height="${alto}"
+            xmlns="http://www.w3.org/2000/svg" role="img"
+            aria-label="Dibujo de la estructura de datos">${g}</svg>`;
+}
+
+/* ============================================================
+   CONTENIDO: pila dinámica de enteros (P1.1)
+   ============================================================ */
+const PILA = {
+  id:"pila",
+  nombre:"Pila dinámica",
+  practica:"Práctica 1 · P1.1 · pilaEnterosDinamica",
+  declaracion:
+`typedef int tipoElementoPila;
+
+typedef struct celdaP{
+    tipoElementoPila elem;
+    struct celdaP *sig;
+} celdaPila;
+
+typedef celdaPila* tipoPila;`,
+  notaDeclaracion:
+`Una pila <b>es</b> un puntero: <code>tipoPila</code> no es más que la dirección de la
+celda que está en la cima. Cada celda guarda su valor y la dirección de la siguiente.
+La última guarda <code>NULL</code>, que es lo que marca el final; en los dibujos se ve como una
+<b>barra diagonal</b> en el campo <code>sig</code>.`,
+  ejemplos:[
+    { titulo:"Pila vacía", nota:"<b>pila == NULL</b> — no hay ninguna celda. Ojo: la pila existe como variable, lo que no existe es ninguna celda.",
+      estado: E([], [p("pila","NULL")]) },
+    { titulo:"Un elemento", nota:"<b>pila → 5</b> — una sola celda, y su campo <code>sig</code> vale NULL.",
+      estado: E([c("a",5,"NULL",0)], [p("pila","a")]) },
+    { titulo:"Tres elementos", nota:"<b>pila → 7, 5, 3</b> — el 7 es la cima. Las celdas no están una al lado de otra en memoria: lo único que las une son las flechas.",
+      estado: E([c("a",7,"b",0), c("b",5,"d",1), c("d",3,"NULL",2)], [p("pila","a")]) }
+  ],
+  funciones:[
+
+    /* ---------------- nuevaPila ---------------- */
+    {
+      id:"nuevaPila", nombre:"nuevaPila",
+      codigo:[
+        "void nuevaPila(tipoPila* p){",
+        "    *p=NULL;",
+        "}"
+      ],
+      escenarios:[
+        { id:"base", titulo:"crear una pila",
+          pasos:[
+            { linea:1, texto:"Entramos en la función. <code>p</code> es la <strong>dirección</strong> de la variable <code>pila</code> del programa que nos llama; <code>*p</code> es la pila en sí. En los dibujos representamos siempre <code>*p</code>.",
+              estado: E([], [p("*p", null)]) },
+            { linea:2, texto:"Poner la pila a <code>NULL</code> es todo lo que hace falta: una pila vacía es, literalmente, un puntero que no apunta a nada. No hay que reservar memoria.",
+              estado: E([], [p("*p","NULL","cambia")]) },
+            { linea:3, texto:"Fin. La pila ya se puede usar.",
+              estado: E([], [p("*p","NULL")]) }
+          ]}
+      ]
+    },
+
+    /* ---------------- apilar ---------------- */
+    {
+      id:"apilar", nombre:"apilar",
+      codigo:[
+        "void apilar(tipoPila *p, tipoElementoPila elemento){",
+        "    celdaPila *nuevo;",
+        "    nuevo=(celdaPila*)malloc(sizeof(celdaPila));",
+        "    nuevo->elem=elemento;",
+        "    nuevo->sig=*p;",
+        "    *p=nuevo;",
+        "}"
+      ],
+      escenarios:[
+        { id:"conElementos", titulo:"sobre una pila con elementos",
+          vars:[v("elemento",7)],
+          pasos:[
+            { linea:1, texto:"Entramos con la pila <code>5, 3</code> y queremos apilar el <code>7</code>. Recuerda: <code>p</code> es la dirección de la variable del programa que llama, y <code>*p</code> es la cima.",
+              estado: E([c("b",5,"d",0), c("d",3,"NULL",1)], [p("*p","b")]) },
+            { linea:2, texto:"Se declara el puntero <code>nuevo</code>. Todavía no apunta a ninguna celda: contiene basura. Por eso lo dibujamos fuera de la estructura.",
+              estado: E([c("b",5,"d",0), c("d",3,"NULL",1)], [p("*p","b"), p("nuevo", null)]) },
+            { linea:3, texto:"<code>malloc</code> reserva memoria para una celda. La celda <strong>ya existe</strong>, pero sus dos campos contienen basura: ni <code>elem</code> ni <code>sig</code> tienen aún un valor válido.",
+              estado: E([c("n",null,null,-1,"nueva"), c("b",5,"d",0), c("d",3,"NULL",1)], [p("*p","b"), p("nuevo","n","nueva")]) },
+            { linea:4, texto:"Copiamos el elemento en el campo <code>elem</code>. La celda sigue estando fuera de la pila: nadie de la pila la señala todavía.",
+              estado: E([c("n",7,null,-1,"cambia"), c("b",5,"d",0), c("d",3,"NULL",1)], [p("*p","b"), p("nuevo","n")]) },
+            { linea:5, texto:"<strong>El paso clave.</strong> <code>nuevo->sig</code> pasa a apuntar a donde apunta <code>*p</code>, es decir, a la antigua cima. Fíjate en que ahora llegan <strong>dos flechas</strong> a la celda del 5. La pila todavía no ha cambiado.",
+              estado: E([c("n",7,"b",-1,"cambia"), c("b",5,"d",0), c("d",3,"NULL",1)], [p("*p","b"), p("nuevo","n")]) },
+            { linea:6, texto:"Movemos la cima: <code>*p</code> pasa a apuntar a la celda nueva. Ahora sí, la pila es <code>7, 5, 3</code>. <strong>Si hubiéramos escrito estas dos últimas líneas al revés</strong>, al mover <code>*p</code> primero habríamos perdido para siempre el resto de la pila.",
+              estado: E([c("n",7,"b",-1), c("b",5,"d",0), c("d",3,"NULL",1)], [p("*p","n","cambia"), p("nuevo","n")]) },
+            { linea:7, texto:"Fin. <code>nuevo</code> desaparece al salir de la función, pero la celda permanece: está en el montón (<i>heap</i>), no en la pila de llamadas.",
+              estado: E([c("n",7,"b",-1), c("b",5,"d",0), c("d",3,"NULL",1)], [p("*p","n")]) }
+          ]},
+        { id:"vacia", titulo:"sobre una pila vacía",
+          vars:[v("elemento",7)],
+          pasos:[
+            { linea:1, texto:"Entramos con la pila <strong>vacía</strong> y queremos apilar el <code>7</code>. Vamos a ver que no hace falta ningún caso especial.",
+              estado: E([], [p("*p","NULL")]) },
+            { linea:2, texto:"Se declara <code>nuevo</code>, que todavía no apunta a nada.",
+              estado: E([], [p("*p","NULL"), p("nuevo", null)]) },
+            { linea:3, texto:"<code>malloc</code> crea la celda, con sus campos aún sin valor.",
+              estado: E([c("n",null,null,0,"nueva")], [p("*p","NULL"), p("nuevo","n","nueva")]) },
+            { linea:4, texto:"Guardamos el <code>7</code> en <code>elem</code>.",
+              estado: E([c("n",7,null,0,"cambia")], [p("*p","NULL"), p("nuevo","n")]) },
+            { linea:5, texto:"Como la pila estaba vacía, <code>*p</code> vale <code>NULL</code>, así que <code>nuevo->sig</code> se queda a <code>NULL</code> — que es justo lo que tiene que valer la última celda. <strong>El mismo código sirve para los dos casos.</strong>",
+              estado: E([c("n",7,"NULL",0,"cambia")], [p("*p","NULL"), p("nuevo","n")]) },
+            { linea:6, texto:"<code>*p</code> pasa a apuntar a la celda nueva. La pila es ahora <code>7</code>.",
+              estado: E([c("n",7,"NULL",0)], [p("*p","n","cambia"), p("nuevo","n")]) },
+            { linea:7, texto:"Fin. Una pila de un solo elemento.",
+              estado: E([c("n",7,"NULL",0)], [p("*p","n")]) }
+          ]}
+      ]
+    },
+
+    /* ---------------- desapilar ---------------- */
+    {
+      id:"desapilar", nombre:"desapilar",
+      codigo:[
+        "void desapilar(tipoPila *p){",
+        "    if (esNulaPila(*p))",
+        "        errorPila(\"No se puede desapilar en una pila vacia.\");",
+        "    else{",
+        "        celdaPila *aux;",
+        "        aux=*p;",
+        "        *p=(*p)->sig;",
+        "        free(aux);",
+        "    }",
+        "}"
+      ],
+      escenarios:[
+        { id:"conElementos", titulo:"sobre una pila con elementos",
+          pasos:[
+            { linea:1, texto:"Entramos con la pila <code>7, 5, 3</code>.",
+              estado: E([c("n",7,"b",0), c("b",5,"d",1), c("d",3,"NULL",2)], [p("*p","n")]) },
+            { linea:2, texto:"Comprobamos si la pila está vacía. No lo está, así que nos vamos al <code>else</code>.",
+              estado: E([c("n",7,"b",0,"cambia"), c("b",5,"d",1), c("d",3,"NULL",2)], [p("*p","n","cambia")]) },
+            { linea:5, texto:"Declaramos <code>aux</code>. Todavía no apunta a nada.",
+              estado: E([c("n",7,"b",0), c("b",5,"d",1), c("d",3,"NULL",2)], [p("*p","n"), p("aux", null)]) },
+            { linea:6, texto:"<code>aux</code> guarda la dirección de la cima: ahora <strong>dos punteros señalan la misma celda</strong>. Esto es imprescindible — en cuanto movamos <code>*p</code> perderíamos la única referencia a esa celda y ya no podríamos liberarla.",
+              estado: E([c("n",7,"b",0), c("b",5,"d",1), c("d",3,"NULL",2)], [p("*p","n"), p("aux","n","cambia")]) },
+            { linea:7, texto:"<code>*p</code> pasa a apuntar a la siguiente celda. La celda del 7 ya no forma parte de la pila, pero <strong>no se ha movido de sitio</strong>: sigue en la misma dirección de memoria, sujeta únicamente por <code>aux</code>.",
+              estado: E([c("n",7,"b",0), c("b",5,"d",1), c("d",3,"NULL",2)], [p("*p","b","cambia"), p("aux","n")]) },
+            { linea:8, texto:"<code>free</code> devuelve esa memoria al sistema.",
+              estado: E([c("n",7,"b",0,"liberando"), c("b",5,"d",1), c("d",3,"NULL",2)], [p("*p","b"), p("aux","n","liberando")]) },
+            { linea:9, texto:"La celda ya no es nuestra. <code>aux</code> se queda como <strong>puntero colgante</strong>: sigue guardando una dirección, pero leer <code>aux->elem</code> a partir de aquí sería un error.",
+              estado: E([c("n",null,null,0,"fantasma"), c("b",5,"d",1), c("d",3,"NULL",2)], [p("*p","b"), p("aux","n","fantasma")]) },
+            { linea:10, texto:"Fin. <code>aux</code> desaparece al salir de la función y la pila queda como <code>5, 3</code>.",
+              estado: E([c("b",5,"d",1), c("d",3,"NULL",2)], [p("*p","b")]) }
+          ]},
+        { id:"vacia", titulo:"sobre una pila vacía (caso de error)",
+          pasos:[
+            { linea:1, texto:"Entramos con la pila <strong>vacía</strong>.",
+              estado: E([], [p("*p","NULL")]) },
+            { linea:2, texto:"<code>esNulaPila(*p)</code> es cierto: no hay nada que desapilar.",
+              estado: E([], [p("*p","NULL","cambia")]) },
+            { linea:3, texto:"Avisamos del error y la pila no se toca. <strong>Sin esta comprobación</strong>, la línea 7 intentaría leer <code>(*p)->sig</code> con <code>*p</code> a <code>NULL</code>, y el programa reventaría.",
+              estado: E([], [p("*p","NULL")]) },
+            { linea:10, texto:"Fin. La pila sigue vacía.",
+              estado: E([], [p("*p","NULL")]) }
+          ]}
+      ]
+    }
+  ]
+};
+
+/* ============================================================
+   APLICACIÓN
+   ============================================================ */
+const $ = id => document.getElementById(id);
+let est = PILA, iFunc = 0, iEsc = 0, iPaso = 0, revelado = true;
+
+const func = () => est.funciones[iFunc];
+const escenario = () => func().escenarios[iEsc];
+
+/* El marco de un escenario se calcula una vez y se guarda: además de fijar las
+   columnas, fija el ancho del dibujo al del paso más ancho, para que la hoja no
+   cambie de tamaño al avanzar. */
+/* Las variables declaradas en el escenario valen para todos sus pasos; un paso
+   puede sobreescribirlas para mostrar cómo cambian. */
+function estadoDe(paso, sc){
+  if(paso.estado.vars || !sc.vars) return paso.estado;
+  return Object.assign({}, paso.estado, {vars: sc.vars});
+}
+
+function marcoEscenario(){
+  const sc = escenario();
+  if(!sc._marco){
+    const m = marcoDe(sc.pasos, sc.nullSlot);
+    m.hayVars = m.hayVars || !!sc.vars;
+    let w = 0;
+    for(const s of sc.pasos){
+      const r = /width="(\d+)"/.exec(dibujar(estadoDe(s, sc), m, est.modo));
+      if(r) w = Math.max(w, +r[1]);
+    }
+    m.anchoMin = w;
+    sc._marco = m;
+  }
+  return sc._marco;
+}
+const pasos = () => escenario().pasos;
+const paso = () => pasos()[iPaso];
+const prediccion = () => $("modoPrediccion").checked;
+
+function pintarEstructura(){
+  $("refEstructura").textContent = est.practica;
+  $("declaracion").textContent = est.declaracion;
+  $("notaDeclaracion").innerHTML = est.notaDeclaracion;
+  $("ejemplos").innerHTML = est.ejemplos.map(ej => `
+    <div>
+      <div class="ejemplo-cab">${ej.nota}</div>
+      <div class="hoja">${dibujar(ej.estado, marcoDe([ej]), est.modo)}</div>
+    </div>`).join("");
+}
+
+function pintarTabsFuncion(){
+  $("tabsFuncion").innerHTML = est.funciones.map((f, i) =>
+    `<button class="pest-func" data-i="${i}" aria-pressed="${i === iFunc}">${esc(f.nombre)}()</button>`).join("");
+  $("selEscenario").innerHTML = func().escenarios.map((s, i) =>
+    `<option value="${i}" ${i === iEsc ? "selected" : ""}>${esc(s.titulo)}</option>`).join("");
+}
+
+function pintarCodigo(){
+  const activa = paso().linea;
+  $("codigo").innerHTML = func().codigo.map((l, i) => {
+    const n = i + 1;
+    return `<button class="linea ${n === activa ? "activa" : ""}" data-linea="${n}">
+      <span class="num">${n}</span><span>${esc(l)}</span></button>`;
+  }).join("");
+}
+
+function pintarPaso(){
+  const total = pasos().length;
+  pintarCodigo();
+
+  const mostrar = revelado ? iPaso : Math.max(0, iPaso - 1);
+  $("hoja").innerHTML = dibujar(estadoDe(pasos()[mostrar], escenario()), marcoEscenario(), est.modo);
+
+  const nar = $("narracion");
+  if(revelado){
+    nar.classList.remove("oculta");
+    nar.innerHTML = paso().texto;
+  } else {
+    nar.classList.add("oculta");
+    nar.textContent = "Antes de seguir: ¿cómo queda el dibujo después de ejecutar esta línea? Dibújalo y pulsa «Revelar» para comprobarlo.";
+  }
+
+  $("contador").textContent = `paso ${iPaso + 1} / ${total}`;
+  $("progreso").style.width = `${((iPaso + 1) / total) * 100}%`;
+  $("btnAtras").disabled = iPaso === 0 && revelado;
+  $("btnSiguiente").disabled = revelado && iPaso === total - 1;
+  $("btnSiguiente").textContent = revelado ? "Siguiente →" : "Revelar";
+}
+
+function irA(n, forzarRevelado = true){
+  iPaso = Math.max(0, Math.min(pasos().length - 1, n));
+  revelado = forzarRevelado;
+  pintarPaso();
+}
+
+function siguiente(){
+  if(!revelado){ revelado = true; pintarPaso(); return; }
+  if(iPaso >= pasos().length - 1) return;
+  iPaso++;
+  revelado = !prediccion();
+  pintarPaso();
+}
+
+function atras(){
+  if(!revelado){ revelado = true; pintarPaso(); return; }
+  if(iPaso === 0) return;
+  irA(iPaso - 1);
+}
+
+/* --- eventos --- */
+$("tabsFuncion").addEventListener("click", e => {
+  const b = e.target.closest("[data-i]"); if(!b) return;
+  iFunc = +b.dataset.i; iEsc = 0; pintarTabsFuncion(); irA(0);
+});
+$("selEscenario").addEventListener("change", e => { iEsc = +e.target.value; irA(0); });
+$("codigo").addEventListener("click", e => {
+  const b = e.target.closest("[data-linea]"); if(!b) return;
+  const n = +b.dataset.linea;
+  const i = pasos().findIndex(s => s.linea === n);
+  if(i >= 0) irA(i);
+});
+$("btnSiguiente").addEventListener("click", siguiente);
+$("btnAtras").addEventListener("click", atras);
+$("btnReiniciar").addEventListener("click", () => irA(0));
+$("modoPrediccion").addEventListener("change", () => { revelado = true; pintarPaso(); });
+document.addEventListener("keydown", e => {
+  if(/input|select|textarea/i.test(e.target.tagName)) return;
+  if(e.key === "ArrowRight"){ e.preventDefault(); siguiente(); }
+  if(e.key === "ArrowLeft"){ e.preventDefault(); atras(); }
+});
+
+/* --- arranque --- */
+pintarEstructura();
+pintarTabsFuncion();
+irA(0);
+</script>
